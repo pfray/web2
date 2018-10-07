@@ -18,18 +18,13 @@ pipeline {
           HELM_RELEASE = "$PREVIEW_NAMESPACE".toLowerCase()
         }
         steps {
-          container('nodejs') {
-            sh "npm install"
-            sh "CI=true DISPLAY=:99 npm test"
-
+          container('web2') {
             sh 'export VERSION=$PREVIEW_VERSION && skaffold build -f skaffold.yaml'
-
-
             sh "jx step post build --image $DOCKER_REGISTRY/$ORG/$APP_NAME:$PREVIEW_VERSION"
           }
 
           dir ('./charts/preview') {
-           container('nodejs') {
+           container('web2') {
              sh "make preview"
              sh "jx preview --app $APP_NAME --dir ../.."
            }
@@ -41,7 +36,7 @@ pipeline {
           branch 'master'
         }
         steps {
-          container('nodejs') {
+          container('web2') {
             // ensure we're not on a detached head
             sh "git checkout master"
             sh "git config --global credential.helper store"
@@ -51,16 +46,12 @@ pipeline {
             sh "echo \$(jx-release-version) > VERSION"
           }
           dir ('./charts/website2') {
-            container('nodejs') {
+            container('web2') {
               sh "make tag"
             }
           }
-          container('nodejs') {
-            sh "npm install"
-            sh "CI=true DISPLAY=:99 npm test"
-
+          container('web2') {
             sh 'export VERSION=`cat VERSION` && skaffold build -f skaffold.yaml'
-
             sh "jx step post build --image $DOCKER_REGISTRY/$ORG/$APP_NAME:\$(cat VERSION)"
           }
         }
@@ -71,7 +62,7 @@ pipeline {
         }
         steps {
           dir ('./charts/website2') {
-            container('nodejs') {
+            container('web2') {
               sh 'jx step changelog --version v\$(cat ../../VERSION)'
 
               // release the helm chart
