@@ -1,10 +1,10 @@
 pipeline {
     agent {
-        label "jenkins-nodejs"
+        label "jenkins-web2"
     }
     environment {
       ORG               = 'pfray'
-      APP_NAME          = 'website3'
+      APP_NAME          = 'website2'
       CHARTMUSEUM_CREDS = credentials('jenkins-x-chartmuseum')
     }
     stages {
@@ -18,13 +18,13 @@ pipeline {
           HELM_RELEASE = "$PREVIEW_NAMESPACE".toLowerCase()
         }
         steps {
-          container('nodejs') {
+          container('web2') {
             sh 'export VERSION=$PREVIEW_VERSION && skaffold build -f skaffold.yaml'
             sh "jx step post build --image $DOCKER_REGISTRY/$ORG/$APP_NAME:$PREVIEW_VERSION"
           }
 
           dir ('./charts/preview') {
-           container('nodejs') {
+           container('web2') {
              sh "make preview"
              sh "jx preview --app $APP_NAME --dir ../.."
            }
@@ -36,7 +36,7 @@ pipeline {
           branch 'master'
         }
         steps {
-          container('nodejs') {
+          container('web2') {
             // ensure we're not on a detached head
             sh "git checkout master"
             sh "git config --global credential.helper store"
@@ -45,12 +45,12 @@ pipeline {
             // so we can retrieve the version in later steps
             sh "echo \$(jx-release-version) > VERSION"
           }
-          dir ('./charts/website') {
-            container('nodejs') {
+          dir ('./charts/website2') {
+            container('web2') {
               sh "make tag"
             }
           }
-          container('nodejs') {
+          container('web2') {
             sh 'export VERSION=`cat VERSION` && skaffold build -f skaffold.yaml'
             sh "jx step post build --image $DOCKER_REGISTRY/$ORG/$APP_NAME:\$(cat VERSION)"
           }
@@ -61,8 +61,8 @@ pipeline {
           branch 'master'
         }
         steps {
-          dir ('./charts/website') {
-            container('nodejs') {
+          dir ('./charts/website2') {
+            container('web2') {
               sh 'jx step changelog --version v\$(cat ../../VERSION)'
 
               // release the helm chart
